@@ -1,0 +1,216 @@
+﻿##|TYPE Template
+##|UNIQUEID 53221e98-7c7c-4e97-a6d9-bafc9abf920a
+##|TITLE Simple POCOs
+##|NAMESPACE 
+##|SOURCE_TYPE Source
+##|OUTPUT_LANGUAGE C#
+##|GUI_ENGINE .Net Script
+##|GUI_LANGUAGE C#
+##|GUI_BEGIN
+
+public class GeneratedGui : DotNetScriptGui
+{
+	public GeneratedGui(ZeusContext context) : base(context) 
+	{
+		DnpUtils.ReadInputFromCache(context);
+		
+		
+	}
+
+	//Listbox of tables
+	private GuiListBox lstTable;
+	
+
+	//-----------------------------------------
+	// The User Interface Entry Point
+	//-----------------------------------------
+	public override void Setup()
+	{		
+		ui.Width  = 400;
+		ui.Height = 500;
+		
+		
+		//Output path of genarated files.
+		string sOutputPath = "";
+				
+		if(input.Contains("defaultOutputPath"))
+		{
+			sOutputPath = (string)input["defaultOutputPath"];
+		}
+
+		ui.AddLabel("lblPath", "Output file path: ",  "Select the output path.");
+		ui.AddTextBox("txtPath", sOutputPath, "Select the Output Path.");
+		ui.AddFilePicker("btnPath", "Select Path", "Select the Output Path.", "txtPath", true);
+		
+		//Combobox for selecting a database.
+		
+		ui.AddLabel("lblDatabases", "Select a database:", "Select a database in the dropdown below.");
+		
+		GuiComboBox cmbDatabases = ui.AddComboBox("cmbDatabase", "Select a database.");
+		
+		//Listbox for selecting a table.
+		ui.AddLabel("lblTables", "Select a table", "Select a table.");
+		
+		lstTable = ui.AddListBox("lstTables", "Table");
+		lstTable.Height = 200;
+		
+		ui.AddLabel("lblNamespace", "NameSpace", "Write namespace of genareted class.");
+		
+		string nameSpaceCache = (string)input["txtNameSpace"];
+				
+		ui.AddTextBox("txtNameSpace", nameSpaceCache, "Write namespace of genareted class.");
+		
+		
+
+		if(MyMeta.DefaultDatabase != null)
+		{
+			//Set Initial Values
+			cmbDatabases.BindData(MyMeta.Databases);			
+			cmbDatabases.SelectedValue = MyMeta.DefaultDatabase.Name;
+			BindTables(cmbDatabases.SelectedValue);
+		}
+	
+		//Set EventHandler
+		cmbDatabases.AttachEvent("onchange", "cmbDatabases_onchange");
+		
+		ui.ShowGui = true;
+	}
+	
+	
+	private void BindTables(string databaseName)
+	{
+		var db = MyMeta.Databases[databaseName];
+		lstTable.BindData(db.Tables);
+	}
+	
+	private void cmbDatabases_onchange(GuiControl control)
+	{	
+		GuiComboBox cmbDatabases = (GuiComboBox)ui["cmbDatabase"];
+		BindTables(cmbDatabases.SelectedText);
+	}
+}
+##|GUI_END
+##|BODY_MODE Markup
+##|BODY_ENGINE .Net Script
+##|BODY_LANGUAGE C#
+##|BODY_TAG_START <%
+##|BODY_TAG_END %>
+##|BODY_BEGIN
+<%#DEBUG%><%
+
+public class GeneratedTemplate : DotNetScriptTemplate
+{
+	public GeneratedTemplate(ZeusContext context) : base(context) {}
+
+	//---------------------------------------------------
+	// Render() is where you want to write your logic    
+	//---------------------------------------------------
+	public override void Render()
+	{
+		//System.Diagnostics.Debugger.Launch();
+		
+		if(context.Objects.ContainsKey("DnpUtils"))
+		{
+			DnpUtils.SaveInputToCache(context);
+		}
+		
+		string buffer = "";
+		
+		//Output path
+		string strFilenameBase = (string)input["txtPath"];
+		
+		if(!strFilenameBase.EndsWith("\\"))
+		{
+			strFilenameBase += "\\";
+		}
+		
+		//NameSpace
+		string settedNameSpace = (string)input["txtNameSpace"];
+		
+		//Database
+		string databaseName  = (string)input["cmbDatabase"];
+		IDatabase database = MyMeta.Databases[databaseName];
+		
+		ArrayList tableNames = (ArrayList)input["lstTables"];
+		
+		foreach(string tblName in tableNames)
+		{
+			ITable dbTable = (ITable)database.Tables[tblName];
+			
+		//Create [tablename].cs
+		%>
+using System;
+
+<%
+			if(!string.IsNullOrEmpty(settedNameSpace))
+			{
+				output.writeln("namespace " + settedNameSpace);
+				output.writeln("{");
+			}
+%>
+	public class <%= TableToClassName(dbTable) %>
+	{
+		<% //Contractor %>
+		public <%= TableToClassName(dbTable) %>()
+		{
+		
+		}
+		
+		<%
+			//Fields from database colmns
+			foreach(IColumn dbColumn in dbTable.Columns)
+			{
+		%>
+		
+		public <%= ColumnToCSharpType(dbColumn) %> <%= ColumnToFieldName(dbColumn) %>
+		{
+			set; get;
+		}		
+		<%
+			}	//end of foreach dbTable.Columns
+		%>
+	}
+<%
+			if(!string.IsNullOrEmpty(settedNameSpace))
+			{
+				output.writeln("}");	//end of namespace
+			}
+
+			//Save the output file for this Table
+			string filename = strFilenameBase + dbTable.Alias + ".cs";
+			output.save(filename, "d");
+			buffer += output.text;
+			output.clear();
+		}	//end of foreach tableNames
+		
+		if(tableNames.Count > 1)
+		{
+			output.write("// Files created in the output directory");
+		}
+		else
+		{
+			output.write(buffer);
+		}
+	}
+	
+	public string TableToClassName(ITable tbl)
+	{
+		string result = tbl.Alias;
+		
+		return result;
+	}
+	
+	public string ColumnToFieldName(IColumn col)
+	{
+		string result = col.Alias;
+		
+		return result;
+	}
+
+	public string ColumnToCSharpType(IColumn col)
+	{
+		return col.LanguageType + (col.IsNullable ? "?" : "");
+	}
+}
+%>
+##|BODY_END
