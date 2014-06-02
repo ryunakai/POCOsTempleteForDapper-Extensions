@@ -7,6 +7,7 @@ MyGeneration is here.
 http://mygeneration.sourceforge.net/
 
 How to use
+
 1. Run MyGeneration (right click and run as an administrator, or you can't save stting file to default path, according to your install path).
 
 2. Open templete file SimplePocos.zeus.
