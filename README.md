@@ -8,8 +8,11 @@ http://mygeneration.sourceforge.net/
 
 How to use
 1. Run MyGeneration (right click and run as an administrator, or you can't save stting file to default path, according to your install path).
+
 2. Open templete file SimplePocos.zeus.
+
 3. Change default settings to be able to connect your database.
+
 4. Click Execute button.
 
 -----
