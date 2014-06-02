@@ -27,7 +27,7 @@ public class GeneratedGui : DotNetScriptGui
 	public override void Setup()
 	{		
 		ui.Width  = 400;
-		ui.Height = 500;
+		ui.Height = 550;
 		
 		
 		//Output path of genarated files.
@@ -54,13 +54,17 @@ public class GeneratedGui : DotNetScriptGui
 		lstTable = ui.AddListBox("lstTables", "Table");
 		lstTable.Height = 200;
 		
-		ui.AddLabel("lblNamespace", "NameSpace", "Write namespace of genareted class.");
+		ui.AddLabel("lblNamespace", "NameSpace", "Write the namespace of genareted class.");
 		
 		string nameSpaceCache = (string)input["txtNameSpace"];
 				
-		ui.AddTextBox("txtNameSpace", nameSpaceCache, "Write namespace of genareted class.");
+		ui.AddTextBox("txtNameSpace", nameSpaceCache, "Write the namespace of genareted class.");
 		
+		ui.AddLabel("lblBaseClass", "BaseClass", "Write the base class of genareted class.");
 		
+		string baseClassCache = (string)input["txtBaseClass"];
+				
+		ui.AddTextBox("txtBaseClass", baseClassCache, "Write the base class of genareted class.");
 
 		if(MyMeta.DefaultDatabase != null)
 		{
@@ -96,7 +100,7 @@ public class GeneratedGui : DotNetScriptGui
 ##|BODY_TAG_START <%
 ##|BODY_TAG_END %>
 ##|BODY_BEGIN
-<%#DEBUG%><%
+<%
 
 public class GeneratedTemplate : DotNetScriptTemplate
 {
@@ -108,6 +112,7 @@ public class GeneratedTemplate : DotNetScriptTemplate
 	public override void Render()
 	{
 		//System.Diagnostics.Debugger.Launch();
+		//System.Diagnostics.Debugger.Break();
 		
 		if(context.Objects.ContainsKey("DnpUtils"))
 		{
@@ -127,6 +132,9 @@ public class GeneratedTemplate : DotNetScriptTemplate
 		//NameSpace
 		string settedNameSpace = (string)input["txtNameSpace"];
 		
+		//Base Class
+		string settedBaseClass = (string)input["txtBaseClass"];
+		
 		//Database
 		string databaseName  = (string)input["cmbDatabase"];
 		IDatabase database = MyMeta.Databases[databaseName];
@@ -136,7 +144,7 @@ public class GeneratedTemplate : DotNetScriptTemplate
 		foreach(string tblName in tableNames)
 		{
 			ITable dbTable = (ITable)database.Tables[tblName];
-			
+
 		//Create [tablename].cs
 		%>
 using System;
@@ -147,24 +155,43 @@ using System;
 				output.writeln("namespace " + settedNameSpace);
 				output.writeln("{");
 			}
-%>
-	public class <%= TableToClassName(dbTable) %>
-	{
-		<% //Contractor %>
+			
+			if(!string.IsNullOrEmpty(dbTable.Description))
+			{
+				output.writeln("\t/// <summary>");
+				output.write("\t/// ");
+				output.writeln(dbTable.Description);
+				output.writeln("\t/// </summary>");
+			}
+%>	public class <%= TableToClassName(dbTable) %>
+<% 
+			if(!string.IsNullOrEmpty(settedBaseClass))
+			{
+				output.writeln("\t\t\t\t\t: " + settedBaseClass);
+			}
+%>	{
 		public <%= TableToClassName(dbTable) %>()
 		{
 		
 		}
 		
-		<%
+<%
 			//Fields from database colmns
 			foreach(IColumn dbColumn in dbTable.Columns)
 			{
-		%>
-		
+				
+				if(!string.IsNullOrEmpty(dbColumn.Description))
+				{
+					output.writeln("/// <summary>");
+					output.write("/// ");
+					output.writeln(dbColumn.Description);
+					output.writeln("/// </summary>");
+				}
+%>
 		public <%= ColumnToCSharpType(dbColumn) %> <%= ColumnToFieldName(dbColumn) %>
 		{
-			set; get;
+			set;
+			get;
 		}		
 		<%
 			}	//end of foreach dbTable.Columns
@@ -193,23 +220,110 @@ using System;
 		}
 	}
 	
-	public string TableToClassName(ITable tbl)
+	private string TableToClassName(ITable tbl)
 	{
 		string result = tbl.Alias;
 		
 		return result;
 	}
 	
-	public string ColumnToFieldName(IColumn col)
+	private string ColumnToFieldName(IColumn col)
 	{
 		string result = col.Alias;
 		
 		return result;
 	}
-
-	public string ColumnToCSharpType(IColumn col)
+	
+	private string ColumnToCSharpType(IColumn col)
 	{
-		return col.LanguageType + (col.IsNullable ? "?" : "");
+		string src = col.LanguageType;
+	
+		if(!col.IsNullable)
+		{
+			return src;
+		}
+	
+		if(src.EndsWith("[]"))
+		{
+			//Array
+			return src;
+		}
+		
+		string langType;
+	
+		switch(src)
+		{
+			case "bool":
+				langType = "System.Boolean";
+				break;
+			case "byte":
+				langType = "System.Byte";
+				break;
+			case "sbyte":
+				langType = "System.SByte";
+				break;
+			case "char":
+				langType = "System.Char";
+				break;
+			case "decimal":
+				langType = "System.Decimal";
+				break;
+			case "double":
+				langType = "System.Double";
+				break;
+			case "float":
+				langType = "System.Single";
+				break;
+			case "int":
+				langType = "System.Int32";
+				break;
+			case "uint":
+				langType = "System.UInt32";
+				break;
+			case "long":
+				langType = "System.Int64";
+				break;
+			case "ulong":
+				langType = "System.UInt64";
+				break;
+			case "object":
+				langType = "System.Object";
+				break;
+			case "short":
+				langType = "System.Int16";
+				break;
+			case "ushort":
+				langType = "System.UInt16";
+				break;
+			case "string":
+				langType = "System.String";
+				break;
+			case "DateTime":
+				langType = "System.DateTime";
+				break;
+			default:
+				if(src.IndexOf('.') == -1)
+				{
+					//in case full name is not given
+					langType = "System." + src;
+				}
+				else
+				{
+					langType = src;
+				}
+				break;
+		}
+		
+		Type t = Type.GetType(langType);
+		
+		if(t.IsValueType)
+		{
+			return src + "?";
+		}
+		else
+		{
+			return src;
+		}
 	}
 }
 %>
