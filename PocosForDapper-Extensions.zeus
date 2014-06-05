@@ -1,6 +1,6 @@
 ﻿##|TYPE Template
 ##|UNIQUEID 53221e98-7c7c-4e97-a6d9-bafc9abf920a
-##|TITLE Simple POCOs
+##|TITLE POCOsForDapper-Extensions
 ##|NAMESPACE 
 ##|SOURCE_TYPE Source
 ##|OUTPUT_LANGUAGE C#
@@ -27,7 +27,7 @@ public class GeneratedGui : DotNetScriptGui
 	public override void Setup()
 	{		
 		ui.Width  = 400;
-		ui.Height = 550;
+		ui.Height = 500;
 		
 		
 		//Output path of genarated files.
@@ -60,12 +60,6 @@ public class GeneratedGui : DotNetScriptGui
 				
 		ui.AddTextBox("txtNameSpace", nameSpaceCache, "Write the namespace of genareted class.");
 		
-		ui.AddLabel("lblBaseClass", "BaseClass", "Write the base class of genareted class.");
-		
-		string baseClassCache = (string)input["txtBaseClass"];
-				
-		ui.AddTextBox("txtBaseClass", baseClassCache, "Write the base class of genareted class.");
-
 		if(MyMeta.DefaultDatabase != null)
 		{
 			//Set Initial Values
@@ -164,17 +158,17 @@ using System;
 				output.writeln("\t/// </summary>");
 			}
 %>	public class <%= TableToClassName(dbTable) %>
-<% 
-			if(!string.IsNullOrEmpty(settedBaseClass))
-			{
-				output.writeln("\t\t\t\t\t: " + settedBaseClass);
-			}
-%>	{
+			: ModelBase
+	{
 		public <%= TableToClassName(dbTable) %>()
 		{
 		
 		}
 		
+		public override string GetTableName()
+		{
+			return "<%= dbTable.Alias %>";
+		}
 <%
 			//Fields from database colmns
 			foreach(IColumn dbColumn in dbTable.Columns)
@@ -182,10 +176,10 @@ using System;
 				
 				if(!string.IsNullOrEmpty(dbColumn.Description))
 				{
-					output.writeln("/// <summary>");
-					output.write("/// ");
+					output.writeln("\t\t\t/// <summary>");
+					output.write("\t\t\t/// ");
 					output.writeln(dbColumn.Description);
-					output.writeln("/// </summary>");
+					output.writeln("\t\t\t/// </summary>");
 				}
 %>
 		public <%= ColumnToCSharpType(dbColumn) %> <%= ColumnToFieldName(dbColumn) %>
@@ -196,7 +190,22 @@ using System;
 		<%
 			}	//end of foreach dbTable.Columns
 		%>
-	}
+	}	<% //end of POCO class %>
+	
+	public class <%= ToPascalCase(dbTable.Alias) + "Mapper"%>
+			: DapperExtensions.Mapper.ClassMapper<<%= TableToClassName(dbTable) %>>
+	{
+		public <%= ToPascalCase(dbTable.Alias) + "Mapper"%>()<% //constantor %>
+		{
+			base.Table("<%=dbTable.Alias%>");
+<%
+			foreach(IColumn dbColumn in dbTable.Columns)
+			{
+				output.write("\t\t\t");
+				output.writeln(ToColumnMap(dbColumn));
+			}
+%>		}<%// end of contractor %>
+	}<%// end of MapperClass %>
 <%
 			if(!string.IsNullOrEmpty(settedNameSpace))
 			{
@@ -230,6 +239,43 @@ using System;
 	private string ColumnToFieldName(IColumn col)
 	{
 		string result = col.Alias;
+		
+		return result;
+	}
+		
+	private string ToColumnMap(IColumn col)
+	{
+		string result =
+			"Map(f => f." + ColumnToFieldName(col) + ").Column(\"" + col.Alias + "\")";
+			
+		if(col.IsInPrimaryKey)
+		{
+			result += ".Key(DapperExtensions.Mapper.KeyType.Assigned)";
+		}
+		
+		result += ";";
+		
+		return result;
+	}
+	
+	private string ToPascalCase(string src)
+	{
+		string[] parts = src.ToLower().Split('_');
+		
+		string result = "";
+		
+		foreach(string item in parts)
+		{
+			if(item.Length > 0)
+			{
+				result += char.ToUpper(item[0]);
+				
+				if(item.Length > 1)
+				{
+					result += item.Substring(1);
+				}				
+			}
+		}
 		
 		return result;
 	}
