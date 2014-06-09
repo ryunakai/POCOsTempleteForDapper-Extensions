@@ -1,4 +1,4 @@
-MCGSimplePocosTemplete
+POCOsTempleteForDapper-Extensions
 ======================
 
 MyGeneration Code Generator's POCOs templete for Dapper-Extensions.
