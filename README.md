@@ -5,7 +5,9 @@ MyGeneration Code Generator's POCOs templete for Dapper-Extensions.
 This create POCO and CustomMapper class as a C# file per a table of database.
 
 MyGeneration Code Generatos (require 1.3.1.1 or later)
+
 http://mygeneration.sourceforge.net/
+
 download: http://sourceforge.net/projects/mygeneration/
 
 Dapper-Extensions.
@@ -26,8 +28,12 @@ How to use
 MyGenaration用のテンプレートファイルです。
 POCOとDapper-ExtensionのカスタムマッパークラスをC#のコードとして出力します。
 
-MyGeneration Code Generatos
+MyGeneration Code Generatos (1.3.1.1 以上)
+
 http://mygeneration.sourceforge.net/
+
+download: http://sourceforge.net/projects/mygeneration/
+
 
 Dapper-Extensions.
 https://github.com/tmsmith/Dapper-Extensions
